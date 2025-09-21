@@ -106,6 +106,18 @@
     languageSelect.addEventListener('change', e => setLanguage(e.target.value));
 
     renderTree();
+
+    // Basic OAuth2 callback page handler
+    if (window.location.pathname.endsWith('/oauth2callback')) {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        document.body.innerHTML = '<h2>OAuth2 authorization successful!</h2><p>You can close this window.</p>';
+        // Here you would exchange the code for a token with your server or Google API
+      } else {
+        document.body.innerHTML = '<h2>OAuth2 authorization failed or cancelled.</h2>';
+      }
+    }
   </script>
 </body>
 </html>
