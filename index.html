@@ -15,6 +15,7 @@
     .lang-section { display: none; margin-top: 10px; }
     .lang-section.active { display: block; }
   </style>
+  <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
   <h1>🍞 Vatican Bread Tracker</h1>
@@ -58,6 +59,10 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
+    const API_KEY = '<YOUR_API_KEY>'; // replace with your API key
+    const SPREADSHEET_ID = '<YOUR_SPREADSHEET_ID>'; // replace with your Google Sheet ID
+    const RANGE = 'Sheet1!A:E';
+
     let loaves = JSON.parse(localStorage.getItem('loaves') || '[]');
 
     function renderTree() {
@@ -78,20 +83,36 @@
       new QRCode(qrCanvas, { text: `${baseURL}/loaf/${loafId}`, width: 200, height: 200 });
     }
 
+    function initGapi(callback) {
+      gapi.load('client', () => {
+        gapi.client.init({ apiKey: API_KEY }).then(callback);
+      });
+    }
+
+    function addLoafToSheet(loaf) {
+      gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: RANGE,
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: { values: [[loaf.id, loaf.name, loaf.city, loaf.country, loaf.parent || '']] }
+      }).then(response => {
+        console.log('Added to Google Sheet', response);
+      }).catch(err => console.error('Error adding to sheet:', err));
+    }
+
     document.getElementById('loafForm').addEventListener('submit', e => {
       e.preventDefault();
       const name = document.getElementById('name').value;
       const city = document.getElementById('city').value;
       const country = document.getElementById('country').value;
       const parent = document.getElementById('parent').value;
-      const loaf = {
-        id: `VB-${String(loaves.length + 1).padStart(4, '0')}`,
-        name, city, country, parent
-      };
+      const loaf = { id: `VB-${String(loaves.length + 1).padStart(4, '0')}`, name, city, country, parent };
       loaves.push(loaf);
       localStorage.setItem('loaves', JSON.stringify(loaves));
       renderTree();
       generateQR(loaf.id);
+      initGapi(() => addLoafToSheet(loaf));
     });
 
     const languageSelect = document.getElementById('languageSelect');
@@ -106,18 +127,6 @@
     languageSelect.addEventListener('change', e => setLanguage(e.target.value));
 
     renderTree();
-
-    // Basic OAuth2 callback page handler
-    if (window.location.pathname.endsWith('/oauth2callback')) {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      if (code) {
-        document.body.innerHTML = '<h2>OAuth2 authorization successful!</h2><p>You can close this window.</p>';
-        // Here you would exchange the code for a token with your server or Google API
-      } else {
-        document.body.innerHTML = '<h2>OAuth2 authorization failed or cancelled.</h2>';
-      }
-    }
   </script>
 </body>
 </html>
