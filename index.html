@@ -22,7 +22,8 @@
   <h1>🍞 Vatican Bread Tracker</h1>
   <h2>Add Your Loaf</h2>
   <form id="loafForm">
-    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="text" id="nickname" placeholder="Your Nickname" required>
+    <input type="text" id="name" placeholder="Your Name (optional)">
     <input type="text" id="city" placeholder="City" required>
     <input type="text" id="country" placeholder="Country" required>
     <input type="text" id="parent" placeholder="Parent Loaf ID" required>
@@ -62,7 +63,7 @@
   <script>
     const API_KEY = 'AIzaSyAhk1Ip_YlpcLkC7UasCEVPS_DwFfVZlEY';
     const SPREADSHEET_ID = '1dSphosF7LSRa__4ZxqU6SqABnstInzM3RatSWqODMHc';
-    const RANGE = 'Sheet1!A:E';
+    const RANGE = 'Sheet1!A:F';
 
     let loaves = JSON.parse(localStorage.getItem('loaves') || '[]');
 
@@ -72,7 +73,7 @@
       loaves.forEach((loaf, index) => {
         const div = document.createElement('div');
         div.className = 'loaf';
-        div.innerHTML = `<span><strong>ID:</strong> ${loaf.id} | <strong>Name:</strong> ${loaf.name} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent}</span>`;
+        div.innerHTML = `<span><strong>ID:</strong> ${loaf.id} | <strong>Nickname:</strong> ${loaf.nickname} | <strong>Name:</strong> ${loaf.name || 'N/A'} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent}</span>`;
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-btn';
         delBtn.textContent = 'Delete';
@@ -105,7 +106,7 @@
         range: RANGE,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
-        resource: { values: [[loaf.id, loaf.name, loaf.city, loaf.country, loaf.parent]] }
+        resource: { values: [[loaf.id, loaf.nickname, loaf.name, loaf.city, loaf.country, loaf.parent]] }
       }).then(response => {
         console.log('Added to Google Sheet', response);
       }).catch(err => console.error('Error adding to sheet:', err));
@@ -113,15 +114,24 @@
 
     document.getElementById('loafForm').addEventListener('submit', e => {
       e.preventDefault();
+      const nickname = document.getElementById('nickname').value.trim();
       const name = document.getElementById('name').value;
       const city = document.getElementById('city').value;
       const country = document.getElementById('country').value;
-      const parent = document.getElementById('parent').value;
-      if (!parent) {
-        alert('Parent Loaf ID is required');
+      const parent = document.getElementById('parent').value.trim();
+
+      if (!nickname) {
+        alert('Nickname is required');
         return;
       }
-      const loaf = { id: `VB-${String(loaves.length + 1).padStart(4, '0')}`, name, city, country, parent };
+
+      const parentExists = loaves.some(loaf => loaf.id === parent);
+      if (!parentExists) {
+        alert('Parent Loaf ID is required and must match an existing loaf ID');
+        return;
+      }
+
+      const loaf = { id: `VB-${String(loaves.length + 1).padStart(4, '0')}`, nickname, name, city, country, parent };
       loaves.push(loaf);
       localStorage.setItem('loaves', JSON.stringify(loaves));
       renderTree();
