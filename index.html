@@ -10,10 +10,11 @@
     form { margin: 20px auto; max-width: 400px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     input, button, select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid #ccc; }
     #tree, #instructions { margin-top: 30px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .loaf { padding: 10px; border-left: 2px solid #888; margin-left: 20px; }
+    .loaf { padding: 10px; border-left: 2px solid #888; margin-left: 20px; display: flex; justify-content: space-between; align-items: center; }
     #qrcode { margin-top: 20px; text-align: center; }
     .lang-section { display: none; margin-top: 10px; }
     .lang-section.active { display: block; }
+    .delete-btn { background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
   </style>
   <script src="https://apis.google.com/js/api.js"></script>
 </head>
@@ -24,7 +25,7 @@
     <input type="text" id="name" placeholder="Your Name" required>
     <input type="text" id="city" placeholder="City" required>
     <input type="text" id="country" placeholder="Country" required>
-    <input type="text" id="parent" placeholder="Parent Loaf ID (if any)">
+    <input type="text" id="parent" placeholder="Parent Loaf ID" required>
     <button type="submit">Add Loaf</button>
   </form>
 
@@ -68,10 +69,19 @@
     function renderTree() {
       const loafList = document.getElementById('loafList');
       loafList.innerHTML = '';
-      loaves.forEach(loaf => {
+      loaves.forEach((loaf, index) => {
         const div = document.createElement('div');
         div.className = 'loaf';
-        div.innerHTML = `<strong>ID:</strong> ${loaf.id} | <strong>Name:</strong> ${loaf.name} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent || 'None'}`;
+        div.innerHTML = `<span><strong>ID:</strong> ${loaf.id} | <strong>Name:</strong> ${loaf.name} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent}</span>`;
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-btn';
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => {
+          loaves.splice(index, 1);
+          localStorage.setItem('loaves', JSON.stringify(loaves));
+          renderTree();
+        };
+        div.appendChild(delBtn);
         loafList.appendChild(div);
       });
     }
@@ -95,7 +105,7 @@
         range: RANGE,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
-        resource: { values: [[loaf.id, loaf.name, loaf.city, loaf.country, loaf.parent || '']] }
+        resource: { values: [[loaf.id, loaf.name, loaf.city, loaf.country, loaf.parent]] }
       }).then(response => {
         console.log('Added to Google Sheet', response);
       }).catch(err => console.error('Error adding to sheet:', err));
@@ -107,6 +117,10 @@
       const city = document.getElementById('city').value;
       const country = document.getElementById('country').value;
       const parent = document.getElementById('parent').value;
+      if (!parent) {
+        alert('Parent Loaf ID is required');
+        return;
+      }
       const loaf = { id: `VB-${String(loaves.length + 1).padStart(4, '0')}`, name, city, country, parent };
       loaves.push(loaf);
       localStorage.setItem('loaves', JSON.stringify(loaves));
