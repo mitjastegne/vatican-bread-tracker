@@ -26,7 +26,7 @@
     <input type="text" id="name" placeholder="Your Name (optional)">
     <input type="text" id="city" placeholder="City" required>
     <input type="text" id="country" placeholder="Country" required>
-    <input type="text" id="parent" placeholder="Parent Loaf ID" required>
+    <input type="text" id="parent" placeholder="Parent Loaf ID">
     <button type="submit">Add Loaf</button>
   </form>
 
@@ -73,7 +73,7 @@
       loaves.forEach((loaf, index) => {
         const div = document.createElement('div');
         div.className = 'loaf';
-        div.innerHTML = `<span><strong>ID:</strong> ${loaf.id} | <strong>Nickname:</strong> ${loaf.nickname} | <strong>Name:</strong> ${loaf.name || 'N/A'} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent}</span>`;
+        div.innerHTML = `<span><strong>ID:</strong> ${loaf.id} | <strong>Nickname:</strong> ${loaf.nickname} | <strong>Name:</strong> ${loaf.name || 'N/A'} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent || 'N/A'}</span>`;
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-btn';
         delBtn.textContent = 'Delete';
@@ -95,21 +95,29 @@
     }
 
     function initGapi(callback) {
-      gapi.load('client', () => {
-        gapi.client.init({ apiKey: API_KEY }).then(callback);
+      gapi.load('client', async () => {
+        try {
+          await gapi.client.init({ apiKey: API_KEY });
+          callback();
+        } catch(err) {
+          console.error('GAPI initialization error:', err);
+        }
       });
     }
 
-    function addLoafToSheet(loaf) {
-      gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: RANGE,
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        resource: { values: [[loaf.id, loaf.nickname, loaf.name, loaf.city, loaf.country, loaf.parent]] }
-      }).then(response => {
+    async function addLoafToSheet(loaf) {
+      try {
+        const response = await gapi.client.sheets.spreadsheets.values.append({
+          spreadsheetId: SPREADSHEET_ID,
+          range: RANGE,
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          resource: { values: [[loaf.id, loaf.nickname, loaf.name, loaf.city, loaf.country, loaf.parent]] }
+        });
         console.log('Added to Google Sheet', response);
-      }).catch(err => console.error('Error adding to sheet:', err));
+      } catch(err) {
+        console.error('Error adding to sheet:', err);
+      }
     }
 
     document.getElementById('loafForm').addEventListener('submit', e => {
@@ -122,12 +130,6 @@
 
       if (!nickname) {
         alert('Nickname is required');
-        return;
-      }
-
-      const parentExists = loaves.some(loaf => loaf.id === parent);
-      if (!parentExists) {
-        alert('Parent Loaf ID is required and must match an existing loaf ID');
         return;
       }
 
