@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vatican Bread Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #fafafa; }
+    h1, h2 { text-align: center; }
+    form { margin: 20px auto; max-width: 400px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input, button, select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid #ccc; }
+    #tree, #instructions { margin-top: 30px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .loaf { padding: 10px; border-left: 2px solid #888; margin-left: 20px; }
+    #qrcode { margin-top: 20px; text-align: center; }
+    .lang-section { display: none; margin-top: 10px; }
+    .lang-section.active { display: block; }
+  </style>
+</head>
+<body>
+  <h1>🍞 Vatican Bread Tracker</h1>
+  <h2>Add Your Loaf</h2>
+  <form id="loafForm">
+    <input type="text" id="name" placeholder="Your Name" required>
+    <input type="text" id="city" placeholder="City" required>
+    <input type="text" id="country" placeholder="Country" required>
+    <input type="text" id="parent" placeholder="Parent Loaf ID (if any)">
+    <button type="submit">Add Loaf</button>
+  </form>
+
+  <div id="tree">
+    <h2>Family Tree</h2>
+    <div id="loafList"></div>
+  </div>
+
+  <div id="qrcode">
+    <h2>QR Code for Sharing</h2>
+    <div id="qrcodeCanvas"></div>
+  </div>
+
+  <div id="instructions">
+    <h2>Instructions</h2>
+    <label for="languageSelect">🌍 Choose language:</label>
+    <select id="languageSelect">
+      <option value="sl">Slovene</option>
+      <option value="en">English</option>
+    </select>
+
+    <div id="instructions-sl" class="lang-section">
+      <h3>Slovene</h3>
+      <p>(Dodaj navodila tukaj...)</p>
+    </div>
+
+    <div id="instructions-en" class="lang-section">
+      <h3>English</h3>
+      <p>(Add instructions here...)</p>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    let loaves = JSON.parse(localStorage.getItem('loaves') || '[]');
+
+    function renderTree() {
+      const loafList = document.getElementById('loafList');
+      loafList.innerHTML = '';
+      loaves.forEach(loaf => {
+        const div = document.createElement('div');
+        div.className = 'loaf';
+        div.innerHTML = `<strong>ID:</strong> ${loaf.id} | <strong>Name:</strong> ${loaf.name} | <strong>City:</strong> ${loaf.city} | <strong>Country:</strong> ${loaf.country} | <strong>Parent:</strong> ${loaf.parent || 'None'}`;
+        loafList.appendChild(div);
+      });
+    }
+
+    function generateQR(loafId) {
+      const qrCanvas = document.getElementById('qrcodeCanvas');
+      qrCanvas.innerHTML = '';
+      const baseURL = 'https://mitjastegne.github.io/vatican-bread-tracker';
+      new QRCode(qrCanvas, { text: `${baseURL}/loaf/${loafId}`, width: 200, height: 200 });
+    }
+
+    document.getElementById('loafForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const city = document.getElementById('city').value;
+      const country = document.getElementById('country').value;
+      const parent = document.getElementById('parent').value;
+      const loaf = {
+        id: `VB-${String(loaves.length + 1).padStart(4, '0')}`,
+        name, city, country, parent
+      };
+      loaves.push(loaf);
+      localStorage.setItem('loaves', JSON.stringify(loaves));
+      renderTree();
+      generateQR(loaf.id);
+    });
+
+    const languageSelect = document.getElementById('languageSelect');
+    const sections = { sl: document.getElementById('instructions-sl'), en: document.getElementById('instructions-en') };
+    function setLanguage(lang) {
+      Object.keys(sections).forEach(key => sections[key].classList.remove('active'));
+      sections[lang].classList.add('active');
+      languageSelect.value = lang;
+    }
+
+    fetch('https://ipapi.co/json/').then(res => res.json()).then(data => setLanguage(data.country_code === 'SI' ? 'sl' : 'en')).catch(() => setLanguage('en'));
+    languageSelect.addEventListener('change', e => setLanguage(e.target.value));
+
+    renderTree();
+  </script>
+</body>
+</html>
